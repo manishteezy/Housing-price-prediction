@@ -1,51 +1,22 @@
-import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseModel
-from utils import load_model, predict
+from kafka import KafkaConsumer                                                                                       
+from random import randint                                                                                              
+from time import sleep                                                                                                  
+import sys        
+import pandas as pd    
 
-# defining the main app
-app = FastAPI(title="predictr", docs_url="/")
+from utils import predict
 
-# class which is expected in the payload
-class QueryIn(BaseModel):
-    area: float
-    perimeter: float
-    compactness: float
-    lengthOfKernel: float
-    widthOfKernel: float
-    asymmetryCoefficient: float
-    lengthOfKernelGroove: float
+BROKER = 'kafka:9092'                                                                                               
+TOPIC = 'houseData'                                                                                                      
+                                                                                                                        
+try:                                                                                                                    
+    consumer = KafkaConsumer(TOPIC, bootstrap_servers=BROKER)                                                                         
+except Exception as e:                                                                                                  
+    print(f"ERROR --> {e}")                                                                                             
+    sys.exit(1)                                                                      
 
-# class which is returned in the response
-class QueryOut(BaseModel):
-    salesPrice: float
-
-
-# Route definitions
-@app.get("/ping")
-# Healthcheck route to ensure that the API is up and running
-def ping():
-    return {"ping": "pong"}
-
-
-@app.post("/predict_pricee", response_model=QueryOut, status_code=200)
-# Route to do the prediction using the ML model defined.
-# Payload: QueryIn containing the parameters
-# Response: QueryOut containing the flower_class predicted (200)
-def predict_price():
-    output = {"salesPrice": predict()}
-    return output
-
-
-@app.post("/reload_model", status_code=200)
-# Route to reload the model from file
-def reload_model():
-    load_model()
-    output = {"detail": "Model successfully loaded"}
-    return output
-
-
-# Main function to start the app when main.py is called
-if __name__ == "__main__":
-    # Uvicorn is used to run the server and listen for incoming API requests on 0.0.0.0:8888
-    uvicorn.run("main:app", host="0.0.0.0", port=9999, reload=True)
+for message in consumer:
+    # message value and key are raw bytes -- decode if necessary!
+    # e.g., for unicode: `message.value.decode('utf-8')`
+    df = message.value
+    print("The prediction for ", df)

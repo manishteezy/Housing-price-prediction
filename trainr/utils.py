@@ -11,11 +11,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
-# Removing coloumns which more than 50% values are missing
-def coloums_with_most_missing_values(train):
-    missing = train.isnull().sum()
-    missing = missing[missing > train.shape[0]/2]
-    return missing
 
 def preprocess_data(X):
 
@@ -58,9 +53,7 @@ def train_model():
 
     df = pd.read_csv('./data/train.csv')
     X = df.drop('SalePrice', axis = 1)
-    y = np.log(df['SalePrice'])
-    missing_cols = coloums_with_most_missing_values(X).keys()
-    X.drop(missing_cols, inplace=True, axis=1)
+    y = df['SalePrice']
     X = preprocess_data(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= 0.3)
     clf.fit(X_train, y_train)

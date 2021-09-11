@@ -37,8 +37,8 @@ def load_model():
     clf = pickle.load(open("models/seeds_nb.pkl", "rb"))
 
 
-# function to predict the flower using the model
-def predict(query_data):
-    x = preprocess_data(query_data)
+# function to predict the price using the model
+def predict(data):
+    x = preprocess_data(data)
     prediction = clf.predict([x])
     return prediction
