@@ -14,7 +14,7 @@
 
 ## Running Instructions
 - Create a fork of the repo using the `fork` button.
-- Clone your fork using `https://github.com/manishteezy/Housing-price-prediction`
+- Clone your fork using `https://github.com/technik/Housing-price-prediction`
 - Build the images using `docker-compose build`
 - Spin up the containers using `docker-compose up`
 
@@ -104,7 +104,6 @@
 - We used "Random Forest Regressor" to train and predict the the selling price of the house after taking in the different parameters into consideration.
 
 ## Files Description
-- "Predictr" folder is predicting the selling price of house
 - "Trainr" folder is training the model on the given dataset
 - "Trainr/models/prices_nb.pkl" is the model which is trained on the dataset and used for predicting the selling price
 - "Trainr/data/train.csv" is the training dataset on which the model is trained
