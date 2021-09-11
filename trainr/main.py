@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error
 
 
 def preprocess_data(X):
-
+    print(X.shape)
     cat_features = X.drop(columns=['Id']).select_dtypes(include='object').columns.tolist()
     num_features = X.drop(columns=['Id']).select_dtypes(include=np.number).columns.tolist()
     all_features = cat_features + num_features
