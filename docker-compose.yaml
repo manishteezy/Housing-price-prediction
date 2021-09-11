@@ -37,7 +37,7 @@ services:
       bridge:
         aliases:
           - kafka
-  
+
   producer:
     container_name: producer
     build: ./kafka-producer
@@ -52,7 +52,7 @@ services:
   
   consumer:
     container_name: consumer
-    build: ./predictr
+    build: ./Kafka-Consumer
     restart: always
     depends_on:
      - zookeeper

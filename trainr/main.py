@@ -1,40 +1,67 @@
-import uvicorn
 import os
-import requests
-from fastapi import FastAPI
-from pydantic import BaseModel
-from utils import init_model, train_model
-from typing import List
+import pickle
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+import category_encoders as ce
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, LabelEncoder, StandardScaler, FunctionTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 
 
-PREDICTR_ENDPOINT = os.getenv("PREDICTR_ENDPOINT")
+def preprocess_data(X):
 
-# defining the main app
-app = FastAPI(title="trainr", docs_url="/")
+    cat_features = X.drop(columns=['Id']).select_dtypes(include='object').columns.tolist()
+    num_features = X.drop(columns=['Id']).select_dtypes(include=np.number).columns.tolist()
+    all_features = cat_features + num_features
 
-# calling the load_model during startup.
-# this will train the model and keep it loaded for prediction.
-app.add_event_handler("startup", init_model)
+    # Pipeline for categorical features
+    cat_tfms = Pipeline(steps=[
+        ('cat_ordenc', ce.OrdinalEncoder(return_df=True, handle_unknown='value', handle_missing='value'))
+    ])
 
-# Route definitions
-@app.get("/ping")
-# Healthcheck route to ensure that the API is up and running
-def ping():
-    return {"ping": "pong"}
+    # Pipeline for numerical features
+    num_tfms = Pipeline(steps=[
+        ('num_imputer',  SimpleImputer(missing_values=np.nan, strategy='median'))
+    ])
+
+    features = ColumnTransformer(transformers=[
+        ('cat_tfms', cat_tfms, cat_features),
+        ('num_tfms', num_tfms, num_features)
+    ], remainder='passthrough')
+
+    X_train_tf = pd.DataFrame(features.fit_transform(X[all_features]), columns=all_features)
+
+    return X_train_tf
+
+# function to train and load the model during startup
+def init_model():
+    if not os.path.isfile("models/prices_nb.pkl"):
+        clf = RandomForestRegressor(
+            n_estimators=50, max_depth=None, min_samples_leaf=1, min_samples_split=2,
+            max_features=.7, max_samples=None, n_jobs=-1, random_state=42)
+        pickle.dump(clf, open("models/prices_nb.pkl", "wb"))
 
 
-@app.post("/train", status_code=200)
-# Route to further train the model based on user input in form of feedback loop
-# Payload: FeedbackIn containing the parameters and correct flower class
-# Response: Dict with detail confirming success (200)
-def train():
-    train_model()
-    # tell predictr to reload the model
-    # response = requests.post(f"{PREDICTR_ENDPOINT}/reload_model")
-    return {"detail": "Training successful"}
+# function to train and save the model as part of the feedback loop
+def train_model():
+    # load the model
+    clf = pickle.load(open("models/prices_nb.pkl", "rb"))
 
+    df = pd.read_csv('./data/train.csv')
+    X = df.drop('SalePrice', axis = 1)
+    y = df['SalePrice']
+    X = preprocess_data(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= 0.3)
+    clf.fit(X_train, y_train)
+    rmse = mean_squared_error(y_test, clf.predict(X_test), squared=False)
+    print("Model trained with RMSE: " , rmse)
 
-# Main function to start the app when main.py is called
-if __name__ == "__main__":
-    # Uvicorn is used to run the server and listen for incoming API requests on 0.0.0.0:8888
-    uvicorn.run("main:app", host="0.0.0.0", port=7777, reload=True)
+    # save the model
+    pickle.dump(clf, open("models/prices_nb.pkl", "wb"))
+
+init_model()
+train_model()
